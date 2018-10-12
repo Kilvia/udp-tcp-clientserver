@@ -1,4 +1,4 @@
-from socket_udp import *
+from socket_udp import create_server, recv
 
 if __name__ == '__main__':
 
