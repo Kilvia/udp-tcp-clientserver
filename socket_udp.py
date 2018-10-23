@@ -38,42 +38,45 @@ def create_client(host, port):
 def recv(s, port):
 
     while(1):
-
         data, add = s.recvfrom(4096)
+        print(str(pickle.loads(data).ack))
         packet = pickle.loads(data)
         send_confirm(s, packet, add)
-
-    s.close()
+    # s.close()
 
 
 def send_confirm(s, header, port):
-
     ack = payload("ack", header.ack, header.seqNumber,
                   header.destiny, header.font)
     orig = ack.font
-    print(orig, port)
+    # print(orig, port)
     ack = pickle.dumps(ack)
     s.sendto(ack, port)
 
 
-def send(s, host_s, port, data, host_c):
+def send(s, host_s, port, host_c):
     seqNumber = 0
-    ack = len(data.encode()) + seqNumber
-    msg = payload(data, ack, seqNumber, host_c, host_s)
-    msg = pickle.dumps(msg)
+    while True:
+        data = input("Enter message to send : ")
+        ack = len(data) + seqNumber
+        print('send', ack)
+        msg = payload(data, ack, seqNumber, host_c, host_s)
+        msg = pickle.dumps(msg)
+        s.sendto(msg, (host_s, port))
+    
+def recv_ack(s, host_s, port, host_c):
     rtt = 0.1
 
     aux = time.time()
-    while (time.time() - aux) < 5:
+    #while (time.time() - aux) < 5:
+    while True:
         now = time.time()
         try:
-            s.sendto(msg, (host_s, port))
-            print(host_s, port)
+            # print(host_s, port)
             s.settimeout(rtt)
             data, add = s.recvfrom(4096)
             packet = pickle.loads(data)
-            print(packet.ack)
-            break
+            print('recv', packet.ack)
 
         except socket.error as error:
             #print("Error Code :" + str(err) + "Message" + err)
