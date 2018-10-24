@@ -1,9 +1,11 @@
 import socket
 import sys
 import time
-from payload import *
+from p_client import *
+from p_server import *
 import pickle
 import string
+
 
 
 def create_server(host, port):
@@ -25,7 +27,7 @@ def create_server(host, port):
     return s
 
 
-def create_client(host, port):
+def create_client(port):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print("Socket Created")
@@ -35,56 +37,54 @@ def create_client(host, port):
     return s
 
 # Server
-def recv(s, port):
-    count_test = 0
+def recv(s):
     last_ack = -1
     while(1):
         data, add = s.recvfrom(4096)
-        print(str(pickle.loads(data).ack))
         packet = pickle.loads(data)
-        if(count_test != 2):
-            print('cout', count_test)
-            if(last_ack == -1):
-                last_ack = len(packet.data) + packet.seqNumber
-                print('primeiro', last_ack)
-            elif(len(packet.data) + packet.seqNumber != last_ack + len(packet.data)):
-                print('segundo')
-            else:
-                print(len(packet.data) + packet.seqNumber)
-                #packet.ack = len(packet.data) + packet.seqNumber
-                last_ack = len(packet.data) + packet.seqNumber
-                
-            packet.ack = last_ack
-            send_confirm(s, packet, add)
-        count_test += 1
+        last_ack = send_confirm(s, packet, add, last_ack)
 
     # s.close()
 
 
-def send_confirm(s, header, port):
-    ack = payload("ack", header.ack, header.seqNumber,
-                  header.destiny, header.font)
-    orig = ack.font
-    # print(orig, port)
+def send_confirm(s, packet, add, last_ack):
+
+    if(last_ack == -1 and packet.seqNumber == 0):
+        last_ack = len(packet.data) + packet.seqNumber
+        print('primeiro', last_ack)
+    elif(len(packet.data) + int(packet.seqNumber) == int(last_ack) + len(packet.data)):
+        print(len(packet.data) + packet.seqNumber)
+        #packet.ack = len(packet.data) + packet.seqNumber
+        last_ack = len(packet.data) + packet.seqNumber
+
+    ack = p_server(last_ack)
     ack = pickle.dumps(ack)
-    s.sendto(ack, port)
+    s.sendto(ack, add)
+    return last_ack
 
 
 # Client
-def send(s, host_s, port, host_c):
+def send(s, host, port, window, lock, max_packages):
     seqNumber = 0
+    i = 0
+
     while True:
         data = input("Enter message to send : ")
-        ack = len(data) + seqNumber
         print('send', seqNumber)
-        msg = payload(data, ack, seqNumber, host_c, host_s)
+        msg = p_client(data, seqNumber,host)
         msg = pickle.dumps(msg)
-        s.sendto(msg, (host_s, port))
-        seqNumber = ack
+        s.sendto(msg, (host, port))
+        seqNumber += len(data)
+        
+        if i < max_packages:
+            lock.acquire()
+            window.insert(7%i,(msg, seqNumber))
+            lock.release()
+            i += 1
+        print(window)   
     
-def recv_ack(s, host_s, port, host_c):
+def recv_ack(s, window, lock, lasted_ack, max_packages):
     rtt = 0.1
-
     aux = time.time()
     #while (time.time() - aux) < 5:
     while True:

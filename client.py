@@ -1,4 +1,4 @@
-import threading
+from threading import Thread, Condition
 from socket_udp import *
 
 if __name__ == '__main__':
@@ -7,13 +7,22 @@ if __name__ == '__main__':
     host = 'localhost'             #larces
     port = 8888
 
-    client = create_client(host, port)
+    client = create_client(port)
+    
     try:
-        send_thread = threading.Thread(target = send, args = (client, '', port, host))
-        recv_ack_thread = threading.Thread(target = recv_ack, args = (client, '', port, host))
+        global t_window
+        t_window = []
+        global lasted_ack, max_packages
+        lasted_ack = 0
+        max_packages = 3
+        global lock_w
+        lock_w = Condition()
+        for i in range(0, 7):
+            t_window.append((None,None))
+        send_thread = Thread(target = send, args = (client, host, port, t_window, lock_w, max_packages))
+        recv_ack_thread = Thread(target = recv_ack, args = (client,  t_window, lock_w, lasted_ack, max_packages))
         send_thread.start()
         recv_ack_thread.start()
-        # _thread.start_new_thread( send, (client, '', port, host) )
-        #_thread.start_new_thread( recv_ack, (client, '', port, host) )
+
     except:
         print ("Error: unable to start thread")

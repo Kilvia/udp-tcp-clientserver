@@ -7,4 +7,4 @@ if __name__ == '__main__':
 
     server = create_server(host, port)
     while True:
-        recv(server, port)
+        recv(server)
