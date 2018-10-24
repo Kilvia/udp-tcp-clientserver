@@ -34,14 +34,30 @@ def create_client(host, port):
         sys.exit()
     return s
 
-
+# Server
 def recv(s, port):
-
+    count_test = 0
+    last_ack = -1
     while(1):
         data, add = s.recvfrom(4096)
         print(str(pickle.loads(data).ack))
         packet = pickle.loads(data)
-        send_confirm(s, packet, add)
+        if(count_test != 2):
+            print('cout', count_test)
+            if(last_ack == -1):
+                last_ack = len(packet.data) + packet.seqNumber
+                print('primeiro', last_ack)
+            elif(len(packet.data) + packet.seqNumber != last_ack + len(packet.data)):
+                print('segundo')
+            else:
+                print(len(packet.data) + packet.seqNumber)
+                #packet.ack = len(packet.data) + packet.seqNumber
+                last_ack = len(packet.data) + packet.seqNumber
+                
+            packet.ack = last_ack
+            send_confirm(s, packet, add)
+        count_test += 1
+
     # s.close()
 
 
@@ -54,15 +70,17 @@ def send_confirm(s, header, port):
     s.sendto(ack, port)
 
 
+# Client
 def send(s, host_s, port, host_c):
     seqNumber = 0
     while True:
         data = input("Enter message to send : ")
         ack = len(data) + seqNumber
-        print('send', ack)
+        print('send', seqNumber)
         msg = payload(data, ack, seqNumber, host_c, host_s)
         msg = pickle.dumps(msg)
         s.sendto(msg, (host_s, port))
+        seqNumber = ack
     
 def recv_ack(s, host_s, port, host_c):
     rtt = 0.1
