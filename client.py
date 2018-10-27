@@ -14,7 +14,7 @@ if __name__ == '__main__':
         t_window = []
         global lasted_ack, max_packages
         lasted_ack = 0
-        max_packages = 3
+        max_packages = 2
         global lock_w
         lock_w = Condition()
         for i in range(0, 7):
