@@ -19,7 +19,7 @@ if __name__ == '__main__':
         for i in range(0, 7):
             t_window.append((None,None))
         send_thread = Thread(target = send, args = (client, host, port, t_window, lock_w))
-        recv_ack_thread = Thread(target = recv_ack, args = (client,  t_window, lock_w, lasted_ack))
+        recv_ack_thread = Thread(target = recv_ack, args = (client, host, port, t_window, lock_w, lasted_ack))
         send_thread.start()
         recv_ack_thread.start()
 
