@@ -6,5 +6,6 @@ if __name__ == '__main__':
     port = 8888
 
     server = create_server(host, port)
+   
     while True:
         recv(server)
