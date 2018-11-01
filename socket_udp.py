@@ -54,14 +54,17 @@ def recv(s):
         data, add = s.recvfrom(4096)
         packet = pickle.loads(data)
 
-        probability = random.randint(1,9)
+        probability = random.randint(1,10)
+        
         # Utiliza uma probalidade de 30% para que o pacote demore mais para responder
         if(probability < 4):
             sleep(random.uniform(0.8, 1.8))
-        # Utiliza uma probalidade de 50% para que o pacote responda no tempo certo
-        elif(probability < 9):
+        
+        # Utiliza uma probalidade de 60% para que o pacote responda no tempo certo
+        elif(probability < 10):
             last_ack = send_confirm(s, packet, add, last_ack)
-        # Utiliza uma probalidade de 20% para que o pacote se perca e não responda
+       
+        # Utiliza uma probalidade de 10% para que o pacote se perca e não responda
 
 
 # Função para enviar um ack para o cliente
@@ -90,19 +93,28 @@ def send(s, host, port, window, lock):
     max_packages = 2
     global print_lock
     print_lock = Condition()
-  
+
+    global aux_time
+    aux_time = time()
+    global aux_lock
+    aux_lock = Condition()
+
+    global end
+    end = False
+
+    print(aux_time)
     # Número de sequencia do pacote
     seqNumber = 0
     i = 0
     payloads = ['1', '12', '123', '1234', '12345', '123456', '1234567', '12345678', '123456789']
     
-    while True:
+    while i != 15:
        
         # Demora aleatóriamente entre 0.6 e 1.2 para enviar um novo pacote
         sleep(random.uniform(0.6,1.2))
         # Envia pacotes com tamanho aleatório entre 1 e 9 de acordo com o indice da lista "payloads"
         data = payloads[random.randint(0,8)]
-        packet = p_client(data, seqNumber,host)
+        packet = p_client(data, seqNumber)
         packet = pickle.dumps(packet)
 
         lock.acquire()
@@ -123,15 +135,22 @@ def send(s, host, port, window, lock):
         lock.release()
         
         i += 1
+    
+    end = True
+    print(end)
 
 # Recebe os acks enviados pelo servidor
-def recv_ack(s, host, port, window, lock, lasted_ack):
+def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
  
     # Variaveis globais
     global max_packages
     max_packages = 2
     global print_lock
     print_lock = Condition()
+
+    global aux_time
+    global aux_lock
+    aux_lock = Condition()
 
     rtt = 2.0
  
@@ -142,6 +161,12 @@ def recv_ack(s, host, port, window, lock, lasted_ack):
 
             # Recebe o pacote e o endereço do servidor
             data, add = s.recvfrom(4096)
+
+            aux_lock.acquire()
+            packages_time.append(time() - aux_time)   
+            aux_time = time()
+            aux_lock.release()
+  
             packet = pickle.loads(data)
 
             print_lock.acquire()
@@ -182,6 +207,16 @@ def recv_ack(s, host, port, window, lock, lasted_ack):
             print('Timeout')
             resend_window(s, host, port, window, lock, lasted_ack)
 
+        empty_window = True
+       
+        for i in range(lasted_ack, max_packages + 1): 
+            if window[i%7] != (None, None):
+                empty_window = False
+        
+        if end == True and empty_window == True:
+            print("Bye")
+            break
+
 
 # Reenvia toda a janela em caso de timeout e ack duplicado
 def resend_window(s, host, port, window, lock, lasted_ack):
@@ -189,15 +224,15 @@ def resend_window(s, host, port, window, lock, lasted_ack):
     print('Resend Window')
     print(lasted_ack, window)
    
-    lock.acquire()
     for i in range(max_packages - 1, lasted_ack - 1, -1):
         
-        sleep(0.2)
-        
+        lock.acquire()
         index = window[i%7]
         packet = index[0]
+        lock.release()      
         
         if(packet != None):
             s.sendto(packet, (host, port))
+            sleep(0.2)
    
-    lock.release()    
+      
