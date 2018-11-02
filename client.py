@@ -27,6 +27,7 @@ if __name__ == '__main__':
             # Cria uma janela de tamanho 7
             t_window.append((None,None))
 
+        # Inicia o tempo de execução do cliente
         initial_time = time()      
        
         send_thread = Thread(target = send, args = (client, host, port, t_window, lock_w))
@@ -38,10 +39,13 @@ if __name__ == '__main__':
         send_thread.join()
         recv_ack_thread.join()
 
-        final_time = time()
+        # Finaliza o tempo de execução do cliente
+        final_time = time() 
+
+        # Calcula o tempo de execução do cliente
         total = final_time - initial_time
-        print(packages_time)
         
+        # Calcula 
         for i in packages_time:
             aux += i
             j += 1
@@ -50,11 +54,11 @@ if __name__ == '__main__':
         aux = aux/j
 
         print("\n******************************************************")
-        print("************** \t\tTempo Total  *****************")
-        print("****  \t\t{}s\t\t  ****".format(total))
+        print("****\t\tTempo de Envio dos Dados\t  ****")
+        print("****  \t\t\t{}s\t\t\t  ****".format(round(total, 3)))
         print("******************************************************")
-        print("****  \t\tAtraso Médio dos Pacotes\t  ****")
-        print("****  \t\t{}s\t\t  ****".format(aux))
+        print("****\t\tAtraso Médio dos Pacotes\t  ****")
+        print("****  \t\t\t{}s\t\t\t  ****".format(round(aux, 3)))
         print("******************************************************")
     
     except:
