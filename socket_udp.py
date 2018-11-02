@@ -58,13 +58,15 @@ def recv(s):
         print("Pacote com número de sequência {} recebido".format(packet.seqNumber))
         print_lock.release()
 
-        # Sorteia um número aleatorio de 1 a 10
-        probability = random.randint(1,10)
+        # Sorteia um número aleatorio de 1 a 8
+        probability = random.randint(1,8)
         
         # Utiliza uma probalidade de 30% para que o pacote demore mais para responder
         if(probability < 4):
             # O servidor dorme um tempo aleatorio de 0.8 a 1.8
             sleep(random.uniform(0.8, 1.8))
+            # Recebe o valor do ultimo ack confirmado
+            last_ack = send_confirm(s, packet, add, last_ack)
         
         # Utiliza uma probalidade de 60% para que o pacote responda no tempo certo
         elif(probability < 10):
