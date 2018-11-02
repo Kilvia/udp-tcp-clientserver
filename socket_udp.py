@@ -55,7 +55,7 @@ def recv(s):
         packet = pickle.loads(data)
         
         print_lock.acquire()
-        print("Pacote {} recebido".format(packet.seqNumber))
+        print("Pacote com número de sequência {} recebido".format(packet.seqNumber))
         print_lock.release()
 
         # Sorteia um número aleatorio de 1 a 10
@@ -94,7 +94,7 @@ def send_confirm(s, packet, add, last_ack):
     ack = p_server(last_ack)
 
     print_lock.acquire()
-    print("Ack {} enviado".format(last_ack))
+    print("Ack com valor {} enviado".format(last_ack))
     print_lock.release()
 
     # Transforma o pacote em um objeto de bytes para poder ser enviado
@@ -150,7 +150,7 @@ def send(s, host, port, window, lock):
         s.sendto(packet, (host, port))
         
         print_lock.acquire()
-        print("Pacote {} enviado".format(seqNumber))
+        print("Pacote com número de sequência {} enviado".format(seqNumber))
         print_lock.release()
 
         # Atualiza o número de sequencia
@@ -199,7 +199,7 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
             packet = pickle.loads(data)
 
             print_lock.acquire()
-            print("Ack {} recebido".format(packet.ack))
+            print("Ack com número de sequência {} recebido".format(packet.ack))
             print_lock.release()
             
             # Flag para ver se o ack recebido é o esperado na janela
@@ -232,10 +232,18 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
             
             # Ack não é o esperado
             if(ack_awaited == False):
+                print_lock.acquire()
+                print("Ack duplicado")
+                print_lock.release()
+
                 # Como foram recebidos ack duplicados a janela é reenviada
                 resend_window(s, host, port, window, lock, lasted_ack)
 
         except socket.error as error:
+            print_lock.acquire()
+            print("Timeout")
+            print_lock.release()
+
             # Se o houver um timeout a janela será reenviada
             resend_window(s, host, port, window, lock, lasted_ack)
 
@@ -255,7 +263,9 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
 
 # Reenvia toda a janela em caso de timeout e ack duplicado
 def resend_window(s, host, port, window, lock, lasted_ack):
-   
+    print_lock.acquire()
+    print("Reenviando janela de transmissão")
+    print_lock.release()
     # Percorre a janela procurando o pacote que foi perdido
     for i in range(max_packages - 1, lasted_ack - 1, -1):
         
