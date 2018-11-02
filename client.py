@@ -45,12 +45,12 @@ if __name__ == '__main__':
         # Calcula o tempo de execução do cliente
         total = final_time - initial_time
         
-        # Calcula 
+        # Soma o todos os tempos armazenados e a quantidade de elementos armazenados
         for i in packages_time:
             aux += i
             j += 1
-        
-        print(j)
+
+        # Média de atrasos
         aux = aux/j
 
         print("\n******************************************************")

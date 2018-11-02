@@ -14,7 +14,6 @@ def create_server(host, port):
    
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print("Socket Created")
     except socket.error as error:
         print("Failed to create socket. " + error)
         sys.exit()
@@ -25,8 +24,6 @@ def create_server(host, port):
         print("Bind failed. Error Code :", error)
         sys.exit()
 
-    print("Socket bind complete")
-
     return s
 
 # Cria um socket cliente
@@ -34,7 +31,6 @@ def create_client(port):
    
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print("Socket Created")
     except socket.error as error:
         print("Failed to create socket. " + error)
         sys.exit()
@@ -45,7 +41,10 @@ def create_client(port):
 
 # Função para receber os pacotes
 def recv(s):
-  
+    
+    global print_lock
+    print_lock = Condition()
+
     # Ultimo ack recebido
     last_ack = -1
    
@@ -54,6 +53,10 @@ def recv(s):
         data, add = s.recvfrom(4096)
         # Transforma o objeto de bytes no pacotes original
         packet = pickle.loads(data)
+        
+        print_lock.acquire()
+        print("Pacote {} recebido".format(packet.seqNumber))
+        print_lock.release()
 
         # Sorteia um número aleatorio de 1 a 10
         probability = random.randint(1,10)
@@ -74,7 +77,9 @@ def recv(s):
 # Função para enviar um ack para o cliente
 def send_confirm(s, packet, add, last_ack):
 
-    print('Seq', packet.seqNumber, 'LastAck',last_ack)
+    global print_lock
+    print_lock = Condition()
+
     # Verifica se é o primeiro pacote recebido
     if(last_ack == -1 and packet.seqNumber == 0):
         # Atualiza o last_ack
@@ -87,6 +92,11 @@ def send_confirm(s, packet, add, last_ack):
 
     # Constroi o pacote ack
     ack = p_server(last_ack)
+
+    print_lock.acquire()
+    print("Ack {} enviado".format(last_ack))
+    print_lock.release()
+
     # Transforma o pacote em um objeto de bytes para poder ser enviado
     ack = pickle.dumps(ack)
     s.sendto(ack, add)
@@ -102,13 +112,12 @@ def send(s, host, port, window, lock):
     # Variaveis compartilhadas
     global max_packages
     max_packages = 2
-    global print_lock
-    print_lock = Condition()
-
     global aux_time
     aux_time = time()
     global aux_lock
     aux_lock = Condition()
+    global print_lock
+    print_lock = Condition()
 
     # Variavel para controlar o fim do programa
     global end
@@ -137,12 +146,13 @@ def send(s, host, port, window, lock):
         if i > max_packages:
             lock.wait()
         lock.release()
-
-        print_lock.acquire()
-        print('Send', seqNumber, 'Size', len(data))
-        print_lock.release()
         
         s.sendto(packet, (host, port))
+        
+        print_lock.acquire()
+        print("Pacote {} enviado".format(seqNumber))
+        print_lock.release()
+
         # Atualiza o número de sequencia
         seqNumber += len(data)
 
@@ -162,13 +172,11 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
  
     # Variaveis compartilhadas
     global max_packages
-    max_packages = 2
-    global print_lock
-    print_lock = Condition()
-
     global aux_time
     global aux_lock
     aux_lock = Condition()
+    global print_lock
+    print_lock = Condition()
 
     rtt = 2.0
  
@@ -191,7 +199,7 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
             packet = pickle.loads(data)
 
             print_lock.acquire()
-            print('Ack  ', packet.ack)
+            print("Ack {} recebido".format(packet.ack))
             print_lock.release()
             
             # Flag para ver se o ack recebido é o esperado na janela
@@ -225,12 +233,10 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
             # Ack não é o esperado
             if(ack_awaited == False):
                 # Como foram recebidos ack duplicados a janela é reenviada
-                print('Ack Duplicado')
                 resend_window(s, host, port, window, lock, lasted_ack)
 
         except socket.error as error:
             # Se o houver um timeout a janela será reenviada
-            print('Timeout')
             resend_window(s, host, port, window, lock, lasted_ack)
 
         # Variavel para verificar se todos os pacotes da janela foram confirmados
@@ -244,15 +250,11 @@ def recv_ack(s, host, port, window, lock, lasted_ack, packages_time):
         
         # Verifica se a janela está vazia e se o servidor parou de enviar pacotes
         if end == True and empty_window == True:
-            print("Bye")
             break
 
 
 # Reenvia toda a janela em caso de timeout e ack duplicado
 def resend_window(s, host, port, window, lock, lasted_ack):
-    
-    print('Resend Window')
-    print(lasted_ack, window)
    
     # Percorre a janela procurando o pacote que foi perdido
     for i in range(max_packages - 1, lasted_ack - 1, -1):
